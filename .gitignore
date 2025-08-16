@@ -1,0 +1,23 @@
+# .gitignore
+
+# Data + artifacts
+data/
+text_data/
+image_data/
+artifacts/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Virtual env
+.venv/
+
+# Model weights
+*.pt
+*.ckpt
