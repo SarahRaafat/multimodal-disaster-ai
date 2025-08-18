@@ -12,19 +12,50 @@ Test: Acc 96.6%, Prec 0.948, Rec 0.986, F1 0.967
 Confusion matrix: [[TN 73, FP 1], [FN 4, TP 71]]
 Notes: CPU, light aug (flip/rotate/color jitter), 4 epochs.
 
+## Error Analysis (Test)
+
+### Text (DistilBERT, thr=0.58 tuned on val)
+- Test: Prec 0.795 • Rec 0.758 • F1 0.776
+- Common FP patterns: headlines/sensational words (“storm vortex”, “catastrophe”) without real incidents; policy/insurance/legal posts.
+- Common FN patterns: short/slang/ambiguous phrasing; jokes/sarcasm; benign “storm/free” mentions; non-incident uses of “fire/slaughter”.
+
+### Image (ResNet18, thr≈0.30 tuned on val)
+- Test: Prec 0.938 • Rec 1.000 • F1 0.968
+- No FNs observed on test; a handful of FPs (see grid).
+- FP patterns: wet/reflective surfaces; roads/waterlines that resemble flooding.
+
+### Fusion (Late, α≈0.50, thr≈0.46)
+- Test: Acc 83.2% • Prec 0.833 • Rec 0.769 • F1 0.800
+- Notes: fusion uses synthetic index pairing (unpaired datasets); retains solid performance but calibration mainly tied to image stream.
+
+Artifacts:
+- `docs/errors/image_fp_grid.png`
+- `docs/errors/error_summary.json`
+
 ## Embeddings
 Saved to artifacts/embeddings:
 - text_{train,val,test}.npz → (N, 768)
 - image_{train,val,test}.npz → (N, 512)
 
-## Fusion — Early MLP (Embeddings → MLP)
-Settings: 1280-d input [768 text CLS; 512 image penultimate], MLP 1280→512→2, AdamW lr=1e-3, wd=1e-2, dropout=0.2, class weights on.
+## Fusion Baselines
 
-- concat_naive:  Val F1=0.821 • Test Acc=0.839 • Test F1=0.803
-- text_only_pad: Val F1=0.823 • Test Acc=0.810 • Test F1=0.774
-- image_only_pad: Val F1=0.987 • Test Acc=0.973 • Test F1=0.973
+### Early Fusion (Concat → MLP)
+- Test Accuracy: 83.9%
+- Precision: 0.860
+- Recall: 0.754
+- F1: 0.803
+- Notes: Uses joint embeddings (768 text + 512 image). Outperformed text-only, slightly below image-only.
 
-Notes:
-- Datasets are not truly paired; concat_naive uses index-based alignment (ablation).
-- Fusion improves over text-only, but image-only remains best on this data.
-- We will use late-fusion + calibration next to target parity with image while improving calibration.
+### Late Fusion (Calibrated Probs)
+- Validation: best α=0.50, threshold=0.46, F1=0.855
+- Test Results:
+  - Accuracy: 83.2%
+  - Precision: 0.833
+  - Recall: 0.769
+  - F1: 0.800
+  - Confusion Matrix: [[74,10],[15,50]]
+- Calibration (ECE ↓ better, Brier ↓ better):
+  - Text: ECE=0.443, Brier=0.130
+  - Image: ECE=0.146, Brier=0.246
+  - Fused: ECE=0.399, Brier=0.152
+- Notes: Image model dominated performance; fusion matched image on F1 but improved Brier score. High label mismatches (synthetic pairing) limit interpretation.

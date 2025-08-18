@@ -17,5 +17,13 @@ It was developed as a portfolio-quality project to showcase practical data scien
 
 ---
 
+## 🚀 Demo
+
+We provide a [Streamlit](https://streamlit.io) app to interactively test the models.
+
+### Run locally
+```bash
+streamlit run app.py
+
 ## 📂 Project Structure
 
