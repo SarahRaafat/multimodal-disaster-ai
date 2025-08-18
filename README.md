@@ -25,5 +25,22 @@ We provide a [Streamlit](https://streamlit.io) app to interactively test the mod
 ```bash
 streamlit run app.py
 
-## 📂 Project Structure
+### Demo Screenshots
+Single-sample demo:  
+![Single Demo](docs/demo_single.png)
+
+Batch demo:  
+![Batch Demo](docs/demo_batch.png)
+
+## 📊 Results (Test Set)
+
+| Model             | Accuracy | Precision | Recall | F1   |
+|------------------ |----------|-----------|--------|------|
+| Text (DistilBERT) | 81.2%    | 0.795     | 0.758  | 0.776 |
+| Image (ResNet18)  | 96.6%    | 0.948     | 0.986  | 0.967 |
+| Fusion (MLP)      | 83.9%    | 0.860     | 0.754  | 0.803 |
+| Fusion (Late)     | 83.2%    | 0.833     | 0.769  | 0.800 |
+
+
+
 
