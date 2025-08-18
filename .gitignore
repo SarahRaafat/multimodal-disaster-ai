@@ -1,10 +1,13 @@
-# .gitignore
-
-# Data + artifacts
+# =======================
+# Data (never push)
 data/
 text_data/
 image_data/
-artifacts/
+
+# Artifacts (only keep metrics/logs, ignore weights)
+artifacts/**/*.pt
+artifacts/**/*.ckpt
+artifacts/**/*.safetensors
 
 # Python cache
 __pycache__/
@@ -17,7 +20,12 @@ __pycache__/
 
 # Virtual env
 .venv/
+env/
+venv/
 
-# Model weights
-*.pt
-*.ckpt
+# Logs
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db

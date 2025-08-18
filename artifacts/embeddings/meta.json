@@ -1,0 +1,5 @@
+{
+  "text_model": "artifacts\\distilbert",
+  "image_model": "artifacts\\resnet18\\resnet18.pt",
+  "device": "cpu"
+}

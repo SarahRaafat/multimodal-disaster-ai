@@ -16,7 +16,7 @@ from transformers import (
     DistilBertForSequenceClassification,
     get_linear_schedule_with_warmup,
 )
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix, f1_score
 
 # ---------------------
 # Utilities
@@ -73,6 +73,20 @@ def evaluate(model, dataloader, device) -> Dict[str, float]:
     cm = confusion_matrix(golds, preds).tolist()
     return {"accuracy": acc, "precision": prec, "recall": rec, "f1": f1, "confusion_matrix": cm}
 
+# ---- Threshold helper
+def eval_with_threshold(model, dataloader, device, thr=0.5):
+    model.eval(); probs, golds = [], []
+    with torch.no_grad():
+        for batch in dataloader:
+            b = {k: v.to(device) for k, v in batch.items()}
+            logits = model(**b).logits
+            p1 = torch.softmax(logits, dim=1)[:, 1].cpu().numpy()  # P(disaster=1)
+            probs.extend(p1); golds.extend(b["labels"].cpu().numpy())
+    probs = np.array(probs); golds = np.array(golds)
+    preds = (probs >= thr).astype(int)
+    f1 = f1_score(golds, preds, pos_label=1, zero_division=0)
+    return f1, probs, golds, preds
+
 def train_one_epoch(model, dataloader, optimizer, scheduler, device, criterion=None):
     model.train(); total_loss = 0.0
     for batch in dataloader:
@@ -91,7 +105,7 @@ def train_one_epoch(model, dataloader, optimizer, scheduler, device, criterion=N
 
 def main():
     ap = argparse.ArgumentParser(description="Train DistilBERT on disaster tweets (binary classification).")
-    ap.add_argument("--data-dir", type=str, default="text_data", help="train.csv/val.csv/test.csv folder")
+    ap.add_argument("--data-dir", type=str, default="text_data", help="train/val/test CSV folder")
     ap.add_argument("--model-name", type=str, default="distilbert-base-uncased")
     ap.add_argument("--epochs", type=int, default=4)
     ap.add_argument("--batch-size", type=int, default=16)
@@ -130,14 +144,16 @@ def main():
         optimizer, num_warmup_steps=int(0.1 * total_steps), num_training_steps=total_steps
     )
 
-    # Optional class weights (computed from your known counts)
+    # Optional class weights — compute from actual train_df counts
     criterion = None
     if args.class_weights:
-        # Your train split counts from earlier (adjust if you re-sample)
-        n_non, n_pos = 2282, 1718
-        weights = torch.tensor([1.0/n_non, 1.0/n_pos], dtype=torch.float32).to(device)
+        # compute counts from current split (robust if you change sampling later)
+        counts = train_df["y"].value_counts().to_dict()  # {0: non_disaster, 1: disaster}
+        w_non = 1.0 / counts.get(0, 1)
+        w_pos = 1.0 / counts.get(1, 1)
+        weights = torch.tensor([w_non, w_pos], dtype=torch.float32).to(device)
         criterion = nn.CrossEntropyLoss(weight=weights)
-        print(f"[loss] Using class weights = {weights.tolist()}")
+        print(f"[loss] Using class weights = {weights.tolist()}  (from counts={counts})")
 
     history, best_f1 = {"train_loss": [], "val_f1": []}, -1.0
     os.makedirs(args.save_dir, exist_ok=True)
@@ -155,15 +171,34 @@ def main():
                 json.dump(val_metrics, f, indent=2)
             print(f"[save] Best model saved to {args.save_dir}")
 
-    # Final test on best checkpoint
-    print("[info] Reloading best checkpoint before final test...")
+    # === Reload best model before threshold tuning & test ===
+    print("[info] Reloading best checkpoint...")
     best_model = DistilBertForSequenceClassification.from_pretrained(args.save_dir, num_labels=2).to(device)
-    best_test = evaluate(best_model, test_dl, device)
+
+    # Threshold tuning on validation set
+    best_thr, best_thr_f1 = 0.5, 0.0
+    for t in np.linspace(0.30, 0.70, 21):
+        f1_t, _, _, _ = eval_with_threshold(best_model, val_dl, device, thr=t)
+        if f1_t > best_thr_f1:
+            best_thr, best_thr_f1 = t, f1_t
+    print(f"[val] tuned threshold={best_thr:.2f} f1={best_thr_f1:.4f}")
+    with open(Path(args.save_dir) / "best_threshold.json", "w") as f:
+        json.dump({"threshold": float(best_thr), "val_f1": float(best_thr_f1)}, f, indent=2)
+
+    # Test with tuned threshold
+    f1_test, probs, golds, preds = eval_with_threshold(best_model, test_dl, device, thr=best_thr)
+    acc = accuracy_score(golds, preds)
+    prec, rec, f1v, _ = precision_recall_fscore_support(golds, preds, average="binary", pos_label=1, zero_division=0)
+    cm = confusion_matrix(golds, preds).tolist()
+    test_metrics = {
+        "accuracy": acc, "precision": prec, "recall": rec, "f1": f1v,
+        "confusion_matrix": cm, "threshold": float(best_thr)
+    }
     with open(Path(args.save_dir) / "test_metrics.json", "w") as f:
-        json.dump(best_test, f, indent=2)
+        json.dump(test_metrics, f, indent=2)
     with open(Path(args.save_dir) / "history.json", "w") as f:
         json.dump(history, f, indent=2)
-    print("[test-best]", json.dumps(best_test, indent=2))
+    print("[test-best-threshold]", json.dumps(test_metrics, indent=2))
     print(f"[done] artifacts at: {args.save_dir}")
 
 if __name__ == "__main__":
