@@ -16,3 +16,15 @@ Notes: CPU, light aug (flip/rotate/color jitter), 4 epochs.
 Saved to artifacts/embeddings:
 - text_{train,val,test}.npz → (N, 768)
 - image_{train,val,test}.npz → (N, 512)
+
+## Fusion — Early MLP (Embeddings → MLP)
+Settings: 1280-d input [768 text CLS; 512 image penultimate], MLP 1280→512→2, AdamW lr=1e-3, wd=1e-2, dropout=0.2, class weights on.
+
+- concat_naive:  Val F1=0.821 • Test Acc=0.839 • Test F1=0.803
+- text_only_pad: Val F1=0.823 • Test Acc=0.810 • Test F1=0.774
+- image_only_pad: Val F1=0.987 • Test Acc=0.973 • Test F1=0.973
+
+Notes:
+- Datasets are not truly paired; concat_naive uses index-based alignment (ablation).
+- Fusion improves over text-only, but image-only remains best on this data.
+- We will use late-fusion + calibration next to target parity with image while improving calibration.
