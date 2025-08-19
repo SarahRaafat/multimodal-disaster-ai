@@ -59,3 +59,10 @@ Saved to artifacts/embeddings:
   - Image: ECE=0.146, Brier=0.246
   - Fused: ECE=0.399, Brier=0.152
 - Notes: Image model dominated performance; fusion matched image on F1 but improved Brier score. High label mismatches (synthetic pairing) limit interpretation.
+
+
+## Interpretability Notes
+
+- **Text saliency**: Disaster predictions driven by clear hazard terms (*storm, fire, drowned*), while non-disaster often relies on absence of such cues. Sarcasm and figurative speech confuse the model.
+- **Image Grad-CAM**: Correct detections focus on water coverage / roads. False positives linked to shiny surfaces or shadows resembling water.
+- **Fusion**: Combining both modalities helps mitigate some errors but inherits calibration issues.

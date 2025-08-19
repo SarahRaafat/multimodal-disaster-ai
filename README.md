@@ -27,10 +27,10 @@ streamlit run app.py
 
 ### Demo Screenshots
 Single-sample demo:  
-![Single Demo](docs/demo_single.png)
+(docs/demo_single.png)
 
 Batch demo:  
-![Batch Demo](docs/demo_batch.png)
+(docs/demo_batch.png)
 
 ## 📊 Results (Test Set)
 
@@ -42,5 +42,34 @@ Batch demo:
 | Fusion (Late)     | 83.2%    | 0.833     | 0.769  | 0.800 |
 
 
+### 🌍 Geo-Map Demo
+We added a small visualization of model predictions on a map.  
+*Note: coordinates are synthetic for demo purposes only.*  
 
+(docs/map.png)
+
+
+
+## 🔍 Interpretability
+
+To better understand model decisions, we visualized both **text** and **image** predictions.
+
+### Text (DistilBERT – Saliency)
+- Highlighted tokens contribute most to the prediction.
+- Disaster predictions highlight words like *“storm”*, *“fire”*, *“drowned”*.
+- False positives often triggered by sensational words in news/policy headlines.
+
+👉 Open [`docs/interpretability/text_saliency.html`](docs/interpretability/text_saliency.html) to explore interactive examples.
+
+### Images (ResNet18 – Grad-CAM)
+- Grad-CAM heatmaps highlight image regions driving predictions.
+- Correct positives: flooded roads, waterlines strongly activated.
+- False positives: reflections / wet asphalt confused as floods.
+
+Sample Grad-CAM overlays:
+
+<p align="center">
+  <img src="docs/interpretability/gradcam_examples/gradcam_image_155.png" width="400">
+  <img src="docs/interpretability/gradcam_examples/gradcam_image_410.png" width="400">
+</p>
 
