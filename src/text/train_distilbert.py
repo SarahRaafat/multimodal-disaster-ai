@@ -99,6 +99,7 @@ def train_one_epoch(model, dataloader, optimizer, scheduler, device, criterion=N
             loss = criterion(out.logits, batch["labels"])
         loss.backward()
         total_loss += loss.item()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step(); scheduler.step()
         optimizer.zero_grad(set_to_none=True)
     return total_loss / max(1, len(dataloader))
@@ -115,18 +116,26 @@ def main():
     ap.add_argument("--save-dir", type=str, default="artifacts/distilbert")
     ap.add_argument("--class-weights", action="store_true",
                     help="Use inverse-frequency class weights in CrossEntropyLoss")
+    ap.add_argument("--finetune", action="store_true",
+                    help="Unfreeze top layers of DistilBERT and fine-tune with smaller LR")
     args = ap.parse_args()
 
     set_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[device] {device}")
 
+    # ---------------------------
+    # Load data
+    # ---------------------------
     data_dir = Path(args.data_dir)
     train_df = load_split_csv(data_dir / "train.csv")
     val_df   = load_split_csv(data_dir / "val.csv")
     test_df  = load_split_csv(data_dir / "test.csv")
     print(f"[data] train={len(train_df)} val={len(val_df)} test={len(test_df)}")
 
+    # ---------------------------
+    # Tokenizer, Datasets, Loaders
+    # ---------------------------
     tokenizer = DistilBertTokenizerFast.from_pretrained(args.model_name)
     model = DistilBertForSequenceClassification.from_pretrained(args.model_name, num_labels=2).to(device)
 
@@ -138,23 +147,59 @@ def main():
     val_dl   = DataLoader(val_ds,   batch_size=args.batch_size)
     test_dl  = DataLoader(test_ds,  batch_size=args.batch_size)
 
+    # ---------------------------
+    # Optimizer (finetune or not)
+    # ---------------------------
+    if args.finetune:
+        for p in model.parameters():
+            p.requires_grad = False
+        # unfreeze top-2 transformer layers + head
+        for i in [-2, -1]:
+            for p in model.distilbert.transformer.layer[i].parameters():
+                p.requires_grad = True
+        for p in model.pre_classifier.parameters():
+            p.requires_grad = True
+        for p in model.classifier.parameters():
+            p.requires_grad = True
+
+        head_params = list(model.pre_classifier.parameters()) + list(model.classifier.parameters())
+        base_params = []
+        for i in [-2, -1]:
+            base_params += list(model.distilbert.transformer.layer[i].parameters())
+
+        optimizer = AdamW([
+            {"params": base_params, "lr": 5e-6},     # tiny LR for backbone
+            {"params": head_params,  "lr": args.lr}, # e.g., 2e-5
+        ], weight_decay=0.01)
+        print(f"[finetune] Unfroze top-2 layers + head. LRs: base=5e-6, head={args.lr}")
+    else:
+        optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=0.0)
+
+    # ---------------------------
+    # Scheduler
+    # ---------------------------
     total_steps = len(train_dl) * args.epochs
-    optimizer = AdamW(model.parameters(), lr=args.lr)
     scheduler = get_linear_schedule_with_warmup(
-        optimizer, num_warmup_steps=int(0.1 * total_steps), num_training_steps=total_steps
+        optimizer,
+        num_warmup_steps=int(0.1 * total_steps),
+        num_training_steps=total_steps
     )
 
-    # Optional class weights — compute from actual train_df counts
+    # ---------------------------
+    # Optional class weights
+    # ---------------------------
     criterion = None
     if args.class_weights:
-        # compute counts from current split (robust if you change sampling later)
-        counts = train_df["y"].value_counts().to_dict()  # {0: non_disaster, 1: disaster}
+        counts = train_df["y"].value_counts().to_dict()
         w_non = 1.0 / counts.get(0, 1)
         w_pos = 1.0 / counts.get(1, 1)
         weights = torch.tensor([w_non, w_pos], dtype=torch.float32).to(device)
         criterion = nn.CrossEntropyLoss(weight=weights)
         print(f"[loss] Using class weights = {weights.tolist()}  (from counts={counts})")
 
+    # ---------------------------
+    # Training loop
+    # ---------------------------
     history, best_f1 = {"train_loss": [], "val_f1": []}, -1.0
     os.makedirs(args.save_dir, exist_ok=True)
 
@@ -171,11 +216,15 @@ def main():
                 json.dump(val_metrics, f, indent=2)
             print(f"[save] Best model saved to {args.save_dir}")
 
-    # === Reload best model before threshold tuning & test ===
+    # ---------------------------
+    # Reload best model
+    # ---------------------------
     print("[info] Reloading best checkpoint...")
     best_model = DistilBertForSequenceClassification.from_pretrained(args.save_dir, num_labels=2).to(device)
 
-    # Threshold tuning on validation set
+    # ---------------------------
+    # Threshold tuning
+    # ---------------------------
     best_thr, best_thr_f1 = 0.5, 0.0
     for t in np.linspace(0.30, 0.70, 21):
         f1_t, _, _, _ = eval_with_threshold(best_model, val_dl, device, thr=t)
@@ -185,7 +234,9 @@ def main():
     with open(Path(args.save_dir) / "best_threshold.json", "w") as f:
         json.dump({"threshold": float(best_thr), "val_f1": float(best_thr_f1)}, f, indent=2)
 
-    # Test with tuned threshold
+    # ---------------------------
+    # Test evaluation
+    # ---------------------------
     f1_test, probs, golds, preds = eval_with_threshold(best_model, test_dl, device, thr=best_thr)
     acc = accuracy_score(golds, preds)
     prec, rec, f1v, _ = precision_recall_fscore_support(golds, preds, average="binary", pos_label=1, zero_division=0)
