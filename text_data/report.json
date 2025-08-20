@@ -1,0 +1,35 @@
+{
+  "input_path": "D:\\multimodal-disaster-ai\\data\\train.csv",
+  "output_dir": "D:\\multimodal-disaster-ai\\text_data",
+  "rows_input": 7613,
+  "rows_sampled": 5000,
+  "class_counts_before": {
+    "non_disaster": 4342,
+    "disaster": 3271
+  },
+  "class_counts_after": {
+    "non_disaster": 2852,
+    "disaster": 2148
+  },
+  "splits": {
+    "train": 4000,
+    "val": 500,
+    "test": 500
+  },
+  "config": {
+    "text_col": "text",
+    "label_col": "target",
+    "lang_col": null,
+    "lang": "en",
+    "positive_labels": [
+      "1"
+    ],
+    "keep_hashtags_token": false,
+    "target_size": 5000,
+    "val_size": 0.1,
+    "test_size": 0.1,
+    "lowercase": true,
+    "seed": 42,
+    "source_name": "kaggle_disaster_tweets"
+  }
+}

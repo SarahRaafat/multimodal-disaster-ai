@@ -1,8 +1,11 @@
 # =======================
 # Data (never push)
 data/
-text_data/
+text_data/*.csv
+!text_data/README.md
 image_data/
+artifacts/
+outputs/
 
 # Artifacts (only keep metrics/logs, ignore weights)
 artifacts/**/*.pt
@@ -10,10 +13,15 @@ artifacts/**/*.ckpt
 artifacts/**/*.safetensors
 
 # Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.pt
+*.ckpt
+*.bin
+*.safetensors
+**/__pycache__/
+.ipynb_checkpoints/
+.cache/
+wandb/
+huggingface/
 
 # Notebooks
 .ipynb_checkpoints/

@@ -1,3 +1,19 @@
+MIT License
+
+Copyright (c) 2025 Sarah
+
+Permission is hereby granted, free of charge, to any person obtaining a copy...
+[standard MIT text continues]
+
+
+<p align="left">
+  <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white"></a>
+  <a href="https://pytorch.org/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white"></a>
+  <a href="https://huggingface.co/"><img alt="Hugging Face" src="https://img.shields.io/badge/HuggingFace-Transformers-FFCA28?logo=huggingface&logoColor=black"></a>
+  <a href="https://streamlit.io/"><img alt="Streamlit" src="https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white"></a>
+</p>
+
+
 # 🌍 Multimodal Disaster Response AI
 
 > **Proof-of-concept AI system for flood disaster detection using both text (tweets) and images (drone photos).**
@@ -73,3 +89,16 @@ Sample Grad-CAM overlays:
   <img src="docs/interpretability/gradcam_examples/gradcam_image_410.png" width="400">
 </p>
 
+
+### 🧪 Stress Tests (Robustness)
+
+While the model performs well on benchmark datasets, we observed the following failure modes in adversarial testing:
+
+- **Figurative text**: Phrases like “concert was fire” or “song Hurricane” are usually handled correctly but show lower confidence, indicating vulnerability to sarcasm/metaphor.
+- **Edge-case images**: Scenes such as swimming pools, wet roads, or reflective glass buildings may cause confusion, as they visually resemble water-related disasters.
+- **Uncertainty on borderline cases**: Certain non-disaster inputs still yield moderate disaster probability (e.g., wet roads at 0.32).
+
+➡️ See (docs/limitations.md) for detailed examples and discussion.
+
+
+![How it works](docs/how_it_works.png)
