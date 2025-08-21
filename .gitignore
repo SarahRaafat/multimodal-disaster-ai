@@ -1,9 +1,9 @@
 # =======================
 # Data (never push)
-data/
+/data/
 text_data/*.csv
 !text_data/README.md
-image_data/
+/image_data/
 artifacts/
 outputs/
 
