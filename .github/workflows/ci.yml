@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]   # change to [ master ] if your default branch is master
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -16,7 +16,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"   # match your local if you prefer 3.10
+          python-version: "3.11"
 
       - name: Install linters
         run: |
@@ -32,6 +32,8 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     needs: lint
+    env:
+      PYTHONPATH: "."
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,7 +48,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-cov
-          # CPU wheels for torch if needed (uncomment next line if CI struggles to resolve)
+          # If PyTorch fails to resolve, uncomment the next line:
           # pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
 
       - name: Run tests (quick)
@@ -60,11 +62,13 @@ jobs:
         with:
           file: ./coverage.xml
           fail_ci_if_error: true
-        # For private repos, set CODECOV_TOKEN in repo settings → Secrets and variables → Actions
+        # For private repos, set CODECOV_TOKEN in repo settings → Actions secrets
 
   smoke-test:
     runs-on: ubuntu-latest
     needs: tests
+    env:
+      PYTHONPATH: ${{ github.workspace }}   # (optional) for local imports in app.py
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -90,7 +94,6 @@ jobs:
             fi
             sleep 1
           done
-          # Fail if never came up
           curl -sSf http://localhost:8501/ >/dev/null
 
       - name: Shutdown Streamlit
