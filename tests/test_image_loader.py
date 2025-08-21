@@ -1,5 +1,7 @@
-from src.data.image_dataset import get_torchvision_dataloaders
+import pytest
 import torch
+from pathlib import Path
+from src.data.image_dataset import get_torchvision_dataloaders
 
 
 def _get_loaders(result):
@@ -9,6 +11,9 @@ def _get_loaders(result):
     return result
 
 
+@pytest.mark.skipif(
+    not Path("image_data").exists(), reason="No image_data folder in CI"
+)
 def test_image_loaders_one_batch():
     res = get_torchvision_dataloaders(root_dir="image_data", img_size=224, batch_size=4)
     train_dl, val_dl, test_dl = _get_loaders(res)
