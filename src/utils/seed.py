@@ -7,6 +7,7 @@ import random
 import numpy as np
 import torch
 
+
 def set_seed(seed: int = 42):
     print(f"[set_seed] Using seed={seed}")
     random.seed(seed)

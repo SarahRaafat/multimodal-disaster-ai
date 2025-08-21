@@ -1,0 +1,23 @@
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+# Don’t lint heavy/generated dirs or notebooks/scripts for now
+exclude = [
+  ".venv",
+  "artifacts",
+  "data",
+  "image_data",
+  "text_data",
+  "outputs",
+  "docs",
+  "notebooks",
+  "scripts",
+  "**/.ipynb_checkpoints/*",
+]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501"]

@@ -17,6 +17,7 @@ HASHTAG_RE = re.compile(r"#(\w+)")
 MULTISPACE_RE = re.compile(r"\s+")
 CONTROL_RE = re.compile(r"[\u0000-\u001F\u007F]")
 
+
 def clean_text(s: str, keep_hashtags_token: bool = True) -> str:
     """Basic tweet cleaning suitable for fast ML baselines.
     - remove URLs
@@ -37,12 +38,16 @@ def clean_text(s: str, keep_hashtags_token: bool = True) -> str:
     s = MULTISPACE_RE.sub(" ", s).strip()
     return s
 
-def normalize_label(x, positives: Set[str], neg_label="non_disaster", pos_label="disaster"):
+
+def normalize_label(
+    x, positives: Set[str], neg_label="non_disaster", pos_label="disaster"
+):
     """Map various dataset label encodings into {'disaster','non_disaster'}."""
     if pd.isna(x):
         return neg_label
     v = str(x).strip().lower()
     return pos_label if v in positives else neg_label
+
 
 def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Ensure required columns exist: id, text, label, source, lang, created_at, lat, lon."""
@@ -61,17 +66,27 @@ def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
     cols = ["id", "text", "label", "source", "lang", "created_at", "lat", "lon"]
     return df[cols]
 
-def stratified_sample(df: pd.DataFrame, label_col: str, target_size: int) -> pd.DataFrame:
+
+def stratified_sample(
+    df: pd.DataFrame, label_col: str, target_size: int
+) -> pd.DataFrame:
     if len(df) <= target_size:
         return df
     frac = target_size / len(df)
-    return (df.groupby(label_col, group_keys=False)
-              .apply(lambda g: g.sample(frac=frac, random_state=42))
-              .reset_index(drop=True))
+    return (
+        df.groupby(label_col, group_keys=False)
+        .apply(lambda g: g.sample(frac=frac, random_state=42))
+        .reset_index(drop=True)
+    )
 
-def split_train_val_test(df: pd.DataFrame, label_col: str,
-                         val_size: float = 0.1, test_size: float = 0.1,
-                         seed: int = 42) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+
+def split_train_val_test(
+    df: pd.DataFrame,
+    label_col: str,
+    val_size: float = 0.1,
+    test_size: float = 0.1,
+    seed: int = 42,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Stratified split into train/val/test with given fractions (sum <= 1)."""
     assert 0 < val_size < 1 and 0 < test_size < 1 and (val_size + test_size) < 1
     df_train, df_tmp = train_test_split(
@@ -81,24 +96,69 @@ def split_train_val_test(df: pd.DataFrame, label_col: str,
     df_val, df_test = train_test_split(
         df_tmp, test_size=rel_test, stratify=df_tmp[label_col], random_state=seed
     )
-    return df_train.reset_index(drop=True), df_val.reset_index(drop=True), df_test.reset_index(drop=True)
+    return (
+        df_train.reset_index(drop=True),
+        df_val.reset_index(drop=True),
+        df_test.reset_index(drop=True),
+    )
+
 
 def main():
-    ap = argparse.ArgumentParser(description="Prepare disaster text data (clean, normalize, sample, split).")
+    ap = argparse.ArgumentParser(
+        description="Prepare disaster text data (clean, normalize, sample, split)."
+    )
     ap.add_argument("--input", type=str, required=True, help="Path to input CSV (raw).")
-    ap.add_argument("--text-col", type=str, default="text", help="Column containing text.")
-    ap.add_argument("--label-col", type=str, default="label", help="Column containing labels.")
-    ap.add_argument("--lang-col", type=str, default=None, help="Optional language column to filter by en.")
-    ap.add_argument("--lang", type=str, default="en", help="Language code to keep if lang-col is provided.")
-    ap.add_argument("--positive-labels", type=str, default="disaster,urgent,1,positive",
-                    help="Comma-separated values treated as POSITIVE (disaster). Lowercased.")
-    ap.add_argument("--keep-hashtags-token", action="store_true", help="Keep '#hashtag' tokens as-is.")
-    ap.add_argument("--target-size", type=int, default=5000, help="Target total dataset size after sampling.")
-    ap.add_argument("--val-size", type=float, default=0.1, help="Validation fraction (0,1).")
+    ap.add_argument(
+        "--text-col", type=str, default="text", help="Column containing text."
+    )
+    ap.add_argument(
+        "--label-col", type=str, default="label", help="Column containing labels."
+    )
+    ap.add_argument(
+        "--lang-col",
+        type=str,
+        default=None,
+        help="Optional language column to filter by en.",
+    )
+    ap.add_argument(
+        "--lang",
+        type=str,
+        default="en",
+        help="Language code to keep if lang-col is provided.",
+    )
+    ap.add_argument(
+        "--positive-labels",
+        type=str,
+        default="disaster,urgent,1,positive",
+        help="Comma-separated values treated as POSITIVE (disaster). Lowercased.",
+    )
+    ap.add_argument(
+        "--keep-hashtags-token",
+        action="store_true",
+        help="Keep '#hashtag' tokens as-is.",
+    )
+    ap.add_argument(
+        "--target-size",
+        type=int,
+        default=5000,
+        help="Target total dataset size after sampling.",
+    )
+    ap.add_argument(
+        "--val-size", type=float, default=0.1, help="Validation fraction (0,1)."
+    )
     ap.add_argument("--test-size", type=float, default=0.1, help="Test fraction (0,1).")
-    ap.add_argument("--output-dir", type=str, required=True, help="Output directory for splits.")
-    ap.add_argument("--source-name", type=str, default="", help="Optional name of source dataset for metadata.")
-    ap.add_argument("--lowercase", action="store_true", help="Lowercase text after cleaning.")
+    ap.add_argument(
+        "--output-dir", type=str, required=True, help="Output directory for splits."
+    )
+    ap.add_argument(
+        "--source-name",
+        type=str,
+        default="",
+        help="Optional name of source dataset for metadata.",
+    )
+    ap.add_argument(
+        "--lowercase", action="store_true", help="Lowercase text after cleaning."
+    )
     ap.add_argument("--seed", type=int, default=42, help="Random seed.")
     args = ap.parse_args()
 
@@ -107,23 +167,35 @@ def main():
 
     df = pd.read_csv(args.input)
     if args.text_col not in df.columns or args.label_col not in df.columns:
-        raise SystemExit(f"Expected columns '{args.text_col}' and '{args.label_col}' not found. Found: {list(df.columns)}")
+        raise SystemExit(
+            f"Expected columns '{args.text_col}' and '{args.label_col}' not found. Found: {list(df.columns)}"
+        )
 
     # Optional language filter
     if args.lang_col and args.lang_col in df.columns:
         before = len(df)
         df = df[df[args.lang_col].astype(str).str.lower() == args.lang.lower()].copy()
-        print(f"[lang-filter] kept {len(df)}/{before} rows with {args.lang} in '{args.lang_col}'")
+        print(
+            f"[lang-filter] kept {len(df)}/{before} rows with {args.lang} in '{args.lang_col}'"
+        )
 
     # Clean text
     df = df.copy()
-    df["text"] = df[args.text_col].astype(str).map(lambda s: clean_text(s, keep_hashtags_token=args.keep_hashtags_token))
+    df["text"] = (
+        df[args.text_col]
+        .astype(str)
+        .map(lambda s: clean_text(s, keep_hashtags_token=args.keep_hashtags_token))
+    )
     if args.lowercase:
         df["text"] = df["text"].str.lower()
 
     # Normalize labels
-    positives = set([s.strip().lower() for s in args.positive_labels.split(",") if s.strip()])
-    df["label"] = df[args.label_col].map(lambda x: normalize_label(x, positives=positives))
+    positives = set(
+        [s.strip().lower() for s in args.positive_labels.split(",") if s.strip()]
+    )
+    df["label"] = df[args.label_col].map(
+        lambda x: normalize_label(x, positives=positives)
+    )
 
     # Attach optional columns
     if args.source_name:
@@ -140,7 +212,9 @@ def main():
     print(f"[counts-before] {class_counts_before}")
 
     # Stratified sample
-    df_sampled = stratified_sample(df, label_col="label", target_size=args.target_size).reset_index(drop=True)
+    df_sampled = stratified_sample(
+        df, label_col="label", target_size=args.target_size
+    ).reset_index(drop=True)
 
     # Class distribution after sampling
     class_counts_after = df_sampled["label"].value_counts().to_dict()
@@ -148,7 +222,11 @@ def main():
 
     # Split
     train_df, val_df, test_df = split_train_val_test(
-        df_sampled, "label", val_size=args.val_size, test_size=args.test_size, seed=args.seed
+        df_sampled,
+        "label",
+        val_size=args.val_size,
+        test_size=args.test_size,
+        seed=args.seed,
     )
 
     # Save
@@ -192,6 +270,7 @@ def main():
 
     print(f"[done] wrote: {train_path}, {val_path}, {test_path}")
     print(f"[report] {outdir / 'report.json'}")
+
 
 if __name__ == "__main__":
     main()

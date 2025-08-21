@@ -1,43 +1,50 @@
-MIT License
-
-Copyright (c) 2025 Sarah
-
-Permission is hereby granted, free of charge, to any person obtaining a copy...
-[standard MIT text continues]
-
-
-<p align="left">
-  <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white"></a>
-  <a href="https://pytorch.org/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white"></a>
-  <a href="https://huggingface.co/"><img alt="Hugging Face" src="https://img.shields.io/badge/HuggingFace-Transformers-FFCA28?logo=huggingface&logoColor=black"></a>
-  <a href="https://streamlit.io/"><img alt="Streamlit" src="https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white"></a>
-</p>
-
-
 # 🌍 Multimodal Disaster Response AI
+
+[![CI](https://github.com/<USER>/<REPO>/actions/workflows/ci.yml/badge.svg)](https://github.com/<USER>/<REPO>/actions/workflows/ci.yml)
+[![code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Coverage](https://img.shields.io/badge/coverage-run%20locally-informational)](#)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Hugging Face](https://img.shields.io/badge/HuggingFace-Transformers-FFCA28?logo=huggingface&logoColor=black)](https://huggingface.co/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![codecov](https://codecov.io/gh/<USER>/<REPO>/branch/master/graph/badge.svg)](https://codecov.io/gh/<USER>/<REPO>)
+
 
 > **Proof-of-concept AI system for flood disaster detection using both text (tweets) and images (drone photos).**
 
-This project demonstrates how Natural Language Processing (NLP) and Computer Vision (CV) can be combined into a **multimodal AI pipeline** for disaster response scenarios.  
-It was developed as a portfolio-quality project to showcase practical data science and engineering skills for internship applications (e.g., Google STEP/AI Residency).
+This project demonstrates how **Natural Language Processing (NLP)** and **Computer Vision (CV)** can be combined into a **multimodal AI pipeline** for disaster response scenarios.  
+It was developed as a **portfolio-quality project** to showcase practical data science and engineering skills for internship applications (e.g., Google STEP, AI Residency).
 
 ---
 
 ## ✨ Features
-- **Text Classification**: Distinguish between disaster vs. non-disaster tweets.
-- **Image Classification**: Distinguish between flooded vs. non-flooded drone photos.
-- **Fusion Model**: Combine text + image embeddings for improved accuracy.
-- **Balanced Datasets**: Stratified, deduplicated, reproducible splits.
-- **Reproducibility**: Config + seed utilities for deterministic runs.
-- **Interactive Demo**: Planned Streamlit app for exploring results.
+- 📝 **Text Classification** – Distinguish disaster vs. non-disaster tweets (DistilBERT).
+- 🖼️ **Image Classification** – Distinguish flooded vs. non-flooded drone photos (ResNet18).
+- 🔗 **Fusion Model** – Combine text + image embeddings for improved accuracy.
+- 🎯 **Balanced Datasets** – Stratified, deduplicated, reproducible splits.
+- 🔒 **Reproducibility** – Config + seed utilities for deterministic runs.
+- 💻 **Interactive Demo** – Streamlit app for hands-on exploration.
+
+---
+
+## ⚙️ How It Works
+<p align="center">
+  <img src="docs/how_it_works.png" width="600">
+</p>
+
+1. **Input**: Tweets and drone images.  
+2. **Preprocessing**: Tokenization (text) + augmentation (images).  
+3. **Models**: DistilBERT for text, ResNet18 for images.  
+4. **Fusion**: Embeddings combined via MLP / late fusion.  
+5. **Output**: Disaster vs. non-disaster prediction.  
 
 ---
 
 ## 🚀 Demo
 
-We provide a [Streamlit](https://streamlit.io) app to interactively test the models.
-
-### Run locally
+Run locally:
 ```bash
 streamlit run app.py
 
@@ -68,37 +75,39 @@ We added a small visualization of model predictions on a map.
 
 ## 🔍 Interpretability
 
-To better understand model decisions, we visualized both **text** and **image** predictions.
+Text (DistilBERT – Saliency)
 
-### Text (DistilBERT – Saliency)
-- Highlighted tokens contribute most to the prediction.
-- Disaster predictions highlight words like *“storm”*, *“fire”*, *“drowned”*.
-- False positives often triggered by sensational words in news/policy headlines.
+Highlights most influential tokens.
 
-👉 Open [`docs/interpretability/text_saliency.html`](docs/interpretability/text_saliency.html) to explore interactive examples.
+Disaster predictions highlight “storm”, “fire”, “drowned”.
 
-### Images (ResNet18 – Grad-CAM)
-- Grad-CAM heatmaps highlight image regions driving predictions.
-- Correct positives: flooded roads, waterlines strongly activated.
-- False positives: reflections / wet asphalt confused as floods.
+False positives: sensational news/policy headlines.
 
-Sample Grad-CAM overlays:
+👉 Explore: docs/interpretability/text_saliency.html.
 
-<p align="center">
-  <img src="docs/interpretability/gradcam_examples/gradcam_image_155.png" width="400">
-  <img src="docs/interpretability/gradcam_examples/gradcam_image_410.png" width="400">
-</p>
+Images (ResNet18 – Grad-CAM)
 
+Heatmaps show regions driving predictions.
 
-### 🧪 Stress Tests (Robustness)
+True positives: flooded roads, waterlines strongly activated.
 
-While the model performs well on benchmark datasets, we observed the following failure modes in adversarial testing:
+False positives: wet asphalt / reflections confused as floods.
 
-- **Figurative text**: Phrases like “concert was fire” or “song Hurricane” are usually handled correctly but show lower confidence, indicating vulnerability to sarcasm/metaphor.
-- **Edge-case images**: Scenes such as swimming pools, wet roads, or reflective glass buildings may cause confusion, as they visually resemble water-related disasters.
-- **Uncertainty on borderline cases**: Certain non-disaster inputs still yield moderate disaster probability (e.g., wet roads at 0.32).
-
-➡️ See (docs/limitations.md) for detailed examples and discussion.
+<p align="center"> <img src="docs/interpretability/gradcam_examples/gradcam_image_155.png" width="400"> <img src="docs/interpretability/gradcam_examples/gradcam_image_410.png" width="400"> </p>
 
 
-![How it works](docs/how_it_works.png)
+🧪 Stress Tests & Limitations
+
+Observed failure modes:
+
+Figurative text (“concert was fire”, “song Hurricane”) – lower confidence.
+
+Edge-case images (swimming pools, wet roads, reflections).
+
+Borderline uncertainty – some non-disaster cases yield moderate disaster probability.
+
+➡️ More in docs/limitations.md.
+
+📜 License
+
+MIT License © 2025 Sarah
