@@ -1,5 +1,10 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+"""Train DistilBERT for disaster text classification (binary).
+
+Includes class-weighted loss, optional partial fine-tuning, and threshold tuning on validation.
+Saves:
+  - best checkpoint (HF format) to `--save-dir`
+  - `val_metrics.json`, `test_metrics.json`, `history.json`, `best_threshold.json`
+"""
 
 import argparse
 import json
@@ -26,10 +31,8 @@ from sklearn.metrics import (
 )
 
 
-# ---------------------
-# Utilities
-# ---------------------
 def set_seed(seed: int = 42):
+    """Make torch/numpy/python RNG deterministic-ish for reproducibility."""
     import random
 
     random.seed(seed)
@@ -42,6 +45,16 @@ def set_seed(seed: int = 42):
 
 
 def load_split_csv(path: Path) -> pd.DataFrame:
+    """Load a labeled CSV split and return standardized columns.
+
+    Args:
+        path: CSV with columns `text`, `label` where label ∈ {"non_disaster","disaster"}.
+
+    Returns:
+        DataFrame with columns:
+          - text (str)
+          - y (int; 0/1)
+    """
     df = pd.read_csv(path)
     if "text" not in df.columns or "label" not in df.columns:
         raise ValueError(f"{path} must contain 'text' and 'label' columns")
@@ -87,6 +100,16 @@ class TextClsDataset(Dataset):
 
 
 def evaluate(model, dataloader, device) -> Dict[str, float]:
+    """Evaluate accuracy/precision/recall/F1 and confusion matrix on a dataloader.
+
+    Args:
+        model: HF classification model.
+        dataloader: torch DataLoader yielding tokenized batches with `labels`.
+        device: "cpu" or "cuda".
+
+    Returns:
+        Dict with keys: accuracy, precision, recall, f1, confusion_matrix (list[list[int]]).
+    """
     model.eval()
     preds, golds = [], []
     with torch.no_grad():
@@ -110,8 +133,19 @@ def evaluate(model, dataloader, device) -> Dict[str, float]:
     }
 
 
-# ---- Threshold helper
 def eval_with_threshold(model, dataloader, device, thr=0.5):
+    """Compute F1 using a custom probability threshold for the positive class.
+
+    Args:
+        model: HF classification model.
+        dataloader: torch DataLoader.
+        device: device string.
+        thr: decision threshold on P(class=1).
+
+    Returns:
+        (f1, probs, golds, preds): F1 score (float), probabilities (np.ndarray),
+        gold labels (np.ndarray), and hard predictions (np.ndarray).
+    """
     model.eval()
     probs, golds = [], []
     with torch.no_grad():
@@ -129,6 +163,14 @@ def eval_with_threshold(model, dataloader, device, thr=0.5):
 
 
 def train_one_epoch(model, dataloader, optimizer, scheduler, device, criterion=None):
+    """Standard train loop for one epoch with optional custom CE criterion.
+
+    Clips gradients to 1.0. Supports either model’s built-in loss (if labels passed)
+    or a custom `criterion` on logits + labels.
+
+    Returns:
+        Mean loss (float) over the epoch.
+    """
     model.train()
     total_loss = 0.0
     for batch in dataloader:

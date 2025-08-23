@@ -1,5 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+"""Late fusion of text + image probabilities with simple calibration utilities.
+
+- Platt scaling on validation
+- ECE & Brier computation
+- Grid search over alpha (blend) and decision threshold
+"""
 
 import argparse
 import json
@@ -19,7 +23,6 @@ from sklearn.metrics import (
 )
 
 
-# ---------------- utils ----------------
 def set_seed(seed=42):
     import random
 
@@ -136,9 +139,16 @@ def image_probs(root_split_dir, ckpt_path, batch_size=32, img_size=224, device="
     return np.concatenate(probs), np.array(ys, dtype=int)
 
 
-# -------- platt scaling (on val) --------
-def fit_platt(p_val, y_val):
-    # fit logistic regression on logit(p); returns (A,B) so calib(p)=sigmoid(A*logit(p)+B)
+def fit_platt(p_val: np.ndarray, y_val: np.ndarray):
+    """Fit Platt scaling on validation probabilities.
+
+    Args:
+        p_val: Validation probs for class=1.
+        y_val: Validation labels (0/1).
+
+    Returns:
+        (A, B) such that calibrated p = sigmoid(A * logit(p) + B).
+    """
     eps = 1e-6
     logits = np.log(
         np.clip(p_val, eps, 1 - eps) / np.clip(1 - p_val, eps, 1 - eps)

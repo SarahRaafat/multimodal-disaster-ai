@@ -8,7 +8,12 @@ import numpy as np
 import torch
 
 
+"""Reproducibility helpers."""
+
+
 def set_seed(seed: int = 42):
+    """Set random seeds for Python, NumPy, and Torch (incl. CUDA if available)."""
+
     print(f"[set_seed] Using seed={seed}")
     random.seed(seed)
     np.random.seed(seed)

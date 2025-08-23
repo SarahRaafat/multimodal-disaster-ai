@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+"""Train a ResNet18 image classifier (flooded vs non_flooded) with optional fine-tuning."""
 
 import argparse
 import json
@@ -31,6 +30,16 @@ def set_seed(seed: int = 42):
 
 
 def get_loaders(root, img_size, batch_size):
+    """Build image train/val/test loaders from an ImageFolder structure.
+
+    Args:
+        root: Root directory containing `train/`, `val/`, `test/` subfolders.
+        img_size: Resize target (square).
+        batch_size: Samples per batch.
+
+    Returns:
+        (train_dl, val_dl, test_dl, classes)
+    """
     tf_train = transforms.Compose(
         [
             transforms.Resize((img_size, img_size)),
@@ -58,6 +67,7 @@ def get_loaders(root, img_size, batch_size):
 
 
 def evaluate(model, dataloader, device):
+    """Compute metrics (accuracy, precision, recall, F1, confusion matrix) on images."""
     model.eval()
     preds, golds = [], []
     with torch.no_grad():
@@ -82,6 +92,7 @@ def evaluate(model, dataloader, device):
 
 
 def train_epoch(model, dl, criterion, optim, device):
+    """One training epoch over image batches; returns mean loss."""
     model.train()
     total = 0.0
     for x, y in dl:

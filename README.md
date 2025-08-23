@@ -110,6 +110,13 @@ Borderline uncertainty – some non-disaster cases yield moderate disaster proba
 
 ➡️ More in docs/limitations.md.
 
+### Try it yourself
+We include a few demo samples under `/examples`.
+
+```bash
+streamlit run streamlit_app.py --server.headless true
+
+
 📜 License
 
 MIT License © 2025 Sarah

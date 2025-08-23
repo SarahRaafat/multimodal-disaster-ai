@@ -1,7 +1,4 @@
-"""
-src/data/text_dataset.py
-Minimal text dataset loader for disaster classification
-"""
+"""Minimal text dataset loaders for disaster tweet classification (binary)."""
 
 import pandas as pd
 import argparse
@@ -10,10 +7,23 @@ from torch.utils.data import Dataset
 from transformers import DistilBertTokenizerFast
 
 
-def load_text_split(path: str):
-    """
-    Load a split CSV into a DataFrame with columns ['text','y'].
-    Prints size & class balance.
+def load_text_split(path):
+    """Load a CSV split and map labels to integers.
+
+    The CSV must contain:
+      - `text` (str): raw tweet/content
+      - `label` (str): {"non_disaster","disaster"}
+
+    Args:
+        path: Path-like to CSV file.
+
+    Returns:
+        pandas.DataFrame with columns:
+            - text (str)
+            - y (int; 0=non_disaster, 1=disaster)
+
+    Raises:
+        ValueError: if required columns/labels are missing.
     """
     df = pd.read_csv(path)
 
@@ -31,6 +41,11 @@ LABEL2ID = {"non_disaster": 0, "disaster": 1}
 
 
 class TextClsDataset(Dataset):
+    """Tokenized text dataset for binary classification.
+
+    Wraps a HuggingFace tokenizer to produce input_ids, attention_mask, and label tensors.
+    """
+
     def __init__(self, texts, labels, tokenizer: DistilBertTokenizerFast, max_len=128):
         self.texts = texts
         self.labels = labels
@@ -41,6 +56,17 @@ class TextClsDataset(Dataset):
         return len(self.texts)
 
     def __getitem__(self, idx):
+        """Return a tokenized example.
+
+        Args:
+            idx: Index into the dataset.
+
+        Returns:
+            Dict[str, torch.Tensor]: keys include
+              - input_ids (LongTensor)
+              - attention_mask (LongTensor)
+              - labels (LongTensor: 0/1)
+        """
         text = str(self.texts[idx])
         raw_label = self.labels[idx]
         label = LABEL2ID[raw_label] if isinstance(raw_label, str) else int(raw_label)

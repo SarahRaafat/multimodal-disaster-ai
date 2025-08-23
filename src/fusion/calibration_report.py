@@ -1,5 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+"""Produce reliability curves and basic calibration stats for text/image/fused models.
+
+Saves a PNG with the curves and prints ECE/Brier numbers.
+"""
+
 import argparse
 from pathlib import Path
 import numpy as np

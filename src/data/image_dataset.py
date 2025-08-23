@@ -1,7 +1,4 @@
-"""
-src/data/image_dataset.py
-Minimal image dataset loader with torchvision
-"""
+"""Utilities to build torchvision DataLoaders for the image dataset (flooded vs non_flooded)."""
 
 import argparse
 from pathlib import Path
@@ -9,9 +6,28 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 
-def get_torchvision_dataloaders(root_dir, img_size=224, batch_size=8):
-    """
-    Creates train/val/test dataloaders from image_data/ folder.
+def get_torchvision_dataloaders(
+    root_dir: str, img_size: int = 224, batch_size: int = 8, num_workers: int = 2
+):
+    """Create train/val/test dataloaders from an `image_data/` folder.
+
+    Expects the following structure:
+        root_dir/
+          train/{flooded,non_flooded}/...
+          val/{flooded,non_flooded}/...
+          test/{flooded,non_flooded}/...
+
+    Args:
+        root_dir: Path to dataset root.
+        img_size: Final square size for images (HxW).
+        batch_size: Samples per batch.
+        num_workers: DataLoader workers.
+
+    Returns:
+        (train_dl, val_dl, test_dl): three `torch.utils.data.DataLoader` objects.
+
+    Raises:
+        AssertionError: if expected split folders do not exist.
     """
     root = Path(root_dir)
     assert root.exists(), f"{root} not found"
